@@ -16,6 +16,17 @@ func TestHash(t *testing.T) {
     }
 }
 
+func TestLongPassHash(t *testing.T) {
+    hashPassword("ZEHhWB65gUlzdVwtDQArEyx+KVLzp/aTaRaPlBzYRIFj6vjFdqEb0Q5B8zVKCZ0vKbZPZklJz0Fd7su2A+gf7Q==", 13)
+
+    time.Sleep(5 * time.Second) // wait for calculation
+
+    expected := "SsGKniC25ry6qor88fVozdDyNspT4Xqpun8jnZLkPur+0HJWlqz2BUTzhTlGQDOixd0mru+nE8jt6HS90IXWyA=="
+    if hashMap[13] != expected {
+        t.Errorf("Hash was incorrect, got: %s, want: %s.", hashMap[13], expected)
+    }
+}
+
 func TestAverage(t *testing.T) {
     // first clear the duration map
     for k := range durationMap {

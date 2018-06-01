@@ -11,7 +11,17 @@ import (
     "time"
     "encoding/json"
     "context"
+    "log"
+    "os"
 )
+
+type Configuration struct {
+    Port int `json:"port"`
+}
+
+const ConfigFile = "config.json"
+const LogFile = "passhash.log"
+const DefaultPort = 8081
 
 var counter int
 var mutex = &sync.Mutex{}
@@ -20,6 +30,8 @@ var durationMap = map[int]int64{}
 var shuttingDown = false
 var wg sync.WaitGroup
 var server *http.Server
+var configuration Configuration
+var logger *log.Logger
 
 func incrementCounter() {
     mutex.Lock()
@@ -28,15 +40,37 @@ func incrementCounter() {
 }
 
 func main() {
+    loadConfiguration()
+    writer, err := os.Create(LogFile); if err != nil { panic(err) }
+    logger = log.New(writer, "", log.LstdFlags)
+    defer writer.Close()
 
-    server = &http.Server{Addr: ":8081"}
+    server = &http.Server{Addr: ":"+strconv.Itoa(configuration.Port)}
 
     http.HandleFunc("/hash", hashHandler)
     http.HandleFunc("/hash/", hashHandler) // in order to support /{id} path parameter
     http.HandleFunc("/stats", statsHandler)
     http.HandleFunc("/shutdown", shutdownHandler)
 
-    server.ListenAndServe()
+    logger.Printf("Starting server on port %d...\n", configuration.Port)
+    if err := server.ListenAndServe(); err != http.ErrServerClosed {
+        // Error starting or closing listener:
+        logger.Printf("HTTP server ListenAndServe: %v", err)
+    }
+}
+
+func loadConfiguration() {
+    configuration.Port = DefaultPort
+
+    //filename is the path to the json config file
+    file, err := os.Open(ConfigFile); if err != nil {
+        logger.Printf("Unable to open config file: %s", ConfigFile)
+        return
+    }
+    decoder := json.NewDecoder(file)
+    if err = decoder.Decode(&configuration); err != nil {
+        logger.Printf("Error loading configuration file: %v", err)
+    }
 }
 
 type Stats struct {
@@ -46,7 +80,7 @@ type Stats struct {
 
 func statsHandler(writer http.ResponseWriter, request *http.Request) {
     if shuttingDown {
-        fmt.Fprintln(writer, "Shutting down...")
+        fmt.Fprintln(writer, "Server is shutting down...")
         return
     }
 
@@ -62,7 +96,7 @@ func statsHandler(writer http.ResponseWriter, request *http.Request) {
 
 func hashHandler(writer http.ResponseWriter, request *http.Request) {
     if shuttingDown {
-        fmt.Fprintln(writer, "Shutting down...")
+        fmt.Fprintln(writer, "Server is shutting down...")
         return
     }
 
@@ -85,15 +119,20 @@ func shutdownHandler(writer http.ResponseWriter, request *http.Request) {
             shuttingDown = true
             mutex.Unlock()
 
-            wg.Wait()                               // wait for all processing to finish
-            server.Shutdown(context.Background())   // shutdown
+            // wait for processing to finish and shut down server
+            logger.Println("Shutting down server...")
+            wg.Wait()
+            if err := server.Shutdown(context.Background()); err != nil {
+                // Error from closing listeners, or context timeout:
+                logger.Printf("HTTP server Shutdown: %v", err)
+            }
         }()
     }
 }
 
 func handlePost(writer http.ResponseWriter, request *http.Request) {
     request.ParseForm()
-    var password = request.Form.Get("password")
+    var password = request.FormValue("password")
     if password != "" {
         incrementCounter()
         go hashPassword(password, counter)
@@ -104,13 +143,11 @@ func handlePost(writer http.ResponseWriter, request *http.Request) {
 func handleGet(writer http.ResponseWriter, request *http.Request) {
     id := id(request.URL.EscapedPath())
     fmt.Fprintln(writer, hashMap[int(id)])
-    fmt.Fprint(writer, "Duration: ")
-    fmt.Fprintln(writer, durationMap[int(id)])
 }
 
 func hashPassword(password string, counter int) string {
-    wg.Add(1)   // add to waitgroup
-    defer wg.Done()   // indicate done
+    wg.Add(1)     // add to waitgroup
+    defer wg.Done()     // indicate done
 
     startTime := time.Now()     // save start time
     time.Sleep(5 * time.Second) // wait 5 seconds
