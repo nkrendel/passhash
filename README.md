@@ -1,16 +1,15 @@
 # passhash
 simple sha512 password hasher
 
-Run:
-
-```
-go run main.go
-```
-
-Build+Run:
+Build:
 
 ```
 go build
+```
+
+Run:
+
+```
 ./passhash
 ```
 
