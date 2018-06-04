@@ -7,15 +7,19 @@ import (
 
 type Configuration struct {
     Port int `json:"port"`
+    HashSize int64 `json:"hashSize"`
 }
 
 const ConfigFile = "config.json"
-const DefaultPort = 8081
+const DefaultPort = 8081           // default port to listen on
+const DefaultHashSize = 1000000    // default is 1 million entries
 
 var configuration Configuration
 
 func LoadConfiguration() {
-    configuration.Port = DefaultPort    // establish default value
+    // establish default values
+    configuration.Port = DefaultPort
+    configuration.HashSize = DefaultHashSize
 
     //filename is the path to the json config file
     file, err := os.Open(ConfigFile); if err != nil {

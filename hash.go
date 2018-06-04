@@ -20,6 +20,12 @@ func incrementCounter() {
     mutex.Unlock()
 }
 
+func resetCounter() {
+    mutex.Lock()
+    counter = 1 // yes we start from 1!
+    mutex.Unlock()
+}
+
 func HashHandler(writer http.ResponseWriter, request *http.Request) {
     if shuttingDown {
         fmt.Fprintln(writer, "Server is shutting down...")
@@ -41,6 +47,10 @@ func HandlePost(writer http.ResponseWriter, request *http.Request) {
     var password = request.FormValue("password")
     if password != "" {
         incrementCounter()
+        // prevent running out of memory by reusing existing slots after reaching a certain size
+        if counter > configuration.HashSize {
+            resetCounter()
+        }
         go hashPassword(password, counter)
         fmt.Fprintln(writer, strconv.FormatInt(counter, 10))
     } else {

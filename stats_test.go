@@ -11,13 +11,25 @@ func TestAverage(t *testing.T) {
     }
 
     // add some durations
-    durationMap[0] = 1012; incrementCounter()
-    durationMap[1] = 2034; incrementCounter()
-    durationMap[2] = 536; incrementCounter()
-    durationMap[3] = 9876; incrementCounter()
+    incrementCounter()
+    if counter != 1 {
+        t.Errorf(IncorrectCounterMessage, counter, 1)
+    }
+
+    durationMap[1] = 1012
+    incrementCounter()
+    durationMap[2] = 2034
+    incrementCounter()
+    durationMap[3] = 536
+    incrementCounter()
+    durationMap[4] = 9876
+
+    if counter != 4 {
+        t.Errorf(IncorrectCounterMessage, counter, 4)
+    }
 
     rc := average()
-    expected := (durationMap[0] + durationMap[1] + durationMap[2] + durationMap[3]) / 4
+    expected := (durationMap[1] + durationMap[2] + durationMap[3] + durationMap[4]) / 4
     if rc != expected {
         t.Errorf("Average was incorrect, got: %d, want: %d.", rc, expected)
     }
