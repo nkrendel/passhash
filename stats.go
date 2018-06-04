@@ -18,7 +18,7 @@ func StatsHandler(writer http.ResponseWriter, request *http.Request) {
     }
 
     logger.Printf("Received /stats %s request\n", request.Method)
-    var stats = Stats{counter, average()}
+    var stats = Stats{int64(len(durationMap)), average()}
     if bytes, err := json.Marshal(stats); err != nil {
         fmt.Fprintf(writer, "Error serializing..."+err.Error())
     } else {
@@ -35,6 +35,10 @@ func average() int64 {
     if counter == 0 {
         return 0
     } else {
-        return total / int64(counter)
+        if len(durationMap) == 0 {
+            return 0
+        } else {
+            return total / int64(len(durationMap))
+        }
     }
 }
