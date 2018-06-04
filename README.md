@@ -16,7 +16,7 @@ Run:
 `/hash` endopint usage:
 
 ```
-% curl -d "password=angryMonkey" localhost:8081/hash
+% curl -d "password=angryMonkey" localhost:8082/hash
 12
 
 % curl localhost:8082/hash/12
