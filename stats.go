@@ -18,12 +18,18 @@ func StatsHandler(writer http.ResponseWriter, request *http.Request) {
     }
 
     logger.Printf("Received /stats %s request\n", request.Method)
-    var stats = Stats{int64(len(durationMap)), average()}
+    var stats = getStats()
     if bytes, err := json.Marshal(stats); err != nil {
         fmt.Fprintf(writer, "Error serializing..."+err.Error())
     } else {
         fmt.Fprintln(writer, string(bytes))
     }
+}
+
+func getStats() Stats {
+    hashLock.RLock()
+    defer hashLock.RUnlock()
+    return Stats{int64(len(durationMap)), average()}
 }
 
 func average() int64 {

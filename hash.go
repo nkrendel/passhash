@@ -8,9 +8,11 @@ import (
     "encoding/base64"
     "time"
     "strings"
+    "sync"
 )
 
 var counter int64
+var hashLock = sync.RWMutex{}
 var hashMap = map[int64]string{}
 var durationMap = map[int64]int64{}
 
@@ -60,6 +62,8 @@ func HandlePost(writer http.ResponseWriter, request *http.Request) {
 
 func HandleGet(writer http.ResponseWriter, request *http.Request) {
     id := id(request.URL.EscapedPath())
+    hashLock.RLock()
+    defer hashLock.RUnlock()
     if hashMap[id] != "" {
         fmt.Fprintln(writer, hashMap[id])
     }
@@ -79,9 +83,11 @@ func hashPassword(password string, counter int64) string {
 
     // encode hash in base64
     encoded := base64.StdEncoding.EncodeToString(hash)
-    hashMap[counter] = encoded
-
     duration := time.Since(startTime)
+
+    hashLock.Lock()
+    defer hashLock.Unlock()
+    hashMap[counter] = encoded
     durationMap[counter] = duration.Nanoseconds()
 
     // store hash
